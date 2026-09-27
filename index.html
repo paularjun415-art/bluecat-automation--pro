@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BlueCat AI Automation</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            color: #111827;
+        }
+
+        .app {
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 18px;
+            background: #111827;
+            color: white;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .header p {
+            margin: 6px 0 0;
+            color: #d1d5db;
+            font-size: 14px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        .chat {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            min-height: 500px;
+        }
+
+        .message-row {
+            display: flex;
+            margin-bottom: 12px;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.bot {
+            justify-content: flex-start;
+        }
+
+        .message {
+            max-width: 82%;
+            padding: 12px 14px;
+            border-radius: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .user .message {
+            background: #2563eb;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot .message {
+            background: #eef2f7;
+            color: #111827;
+            border-bottom-left-radius: 5px;
+        }
+
+        .time {
+            display: block;
+            font-size: 10px;
+            margin-top: 5px;
+            opacity: 0.6;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            padding: 14px;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .input-area input {
+            flex: 1;
+            min-width: 0;
+            padding: 13px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .input-area input:focus {
+            border-color: #2563eb;
+        }
+
+        .send-btn {
+            border: none;
+            background: #2563eb;
+            color: white;
+            padding: 0 18px;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        .typing {
+            display: none;
+            padding: 0 18px 10px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .typing.show {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .chat {
+                min-height: 450px;
+            }
+
+            .message {
+                max-width: 88%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <header class="header">
+        <h1>🐱 BlueCat AI</h1>
+        <p>AI Customer Automation — Prototype</p>
+
+        <div class="status">
+            <span class="dot"></span>
+            Automation Active
+        </div>
+    </header>
+
+    <main id="chat" class="chat">
+
+        <div class="message-row bot">
+            <div class="message">
+                হ্যালো! 👋 আমি BlueCat AI।
+                Product, price অথবা order সম্পর্কে জানতে পারেন।
+                <span class="time">BlueCat AI</span>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="typing" class="typing">
+        BlueCat AI লিখছে...
+    </div>
+
+    <form id="messageForm" class="input-area">
+
+        <input
+            id="messageInput"
+            type="text"
+            placeholder="Customer message লিখুন..."
+            autocomplete="off"
+        >
+
+        <button
+            type="submit"
+            class="send-btn"
+        >
+            Send
+        </button>
+
+    </form>
+
+</div>
+
+<script>
+
+    /*
+     * ==========================================
+     * BLUECAT AI AUTOMATION
+     * VERSION 1.0
+     * ==========================================
+     */
+
+    const products = [
+        {
+            name: "Blue T-Shirt",
+            price: 850,
+            stock: 20
+        },
+        {
+            name: "Blue Hoodie",
+            price: 1450,
+            stock: 12
+        },
+        {
+            name: "Classic Watch",
+            price: 1990,
+            stock: 8
+        }
+    ];
+
+
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("messageInput");
+    const form = document.getElementById("messageForm");
+    const typing = document.getElementById("typing");
+
+
+    function getCurrentTime() {
+
+        const now = new Date();
+
+        return now.toLocaleTimeString("en-BD", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+
+    function addMessage(text, sender) {
+
+        const row = document.createElement("div");
+
+        row.className = "message-row " + sender;
+
+
+        const message = document.createElement("div");
+
+        message.className = "message";
+
+
+        message.textContent = text;
+
+
+        const time = document.createElement("span");
+
+        time.className = "time";
+
+        time.textContent =
+            sender === "bot"
+                ? "BlueCat AI"
+                : getCurrentTime();
+
+
+        message.appendChild(time);
+
+        row.appendChild(message);
+
+        chat.appendChild(row);
+
+
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+
+    function findProduct(message) {
+
+        const text = message.toLowerCase();
+
+
+        return products.find(function(product) {
+
+            return text.includes(
+                product.name.toLowerCase()
+            );
+
+        });
+    }
+
+
+    function generateReply(message) {
+
+        const text = message
+            .toLowerCase()
+            .trim();
+
+
+        /*
+         * Greeting
+         */
+
+        if (
+            text.includes("hello") ||
+            text.includes("hi") ||
+            text.includes("hey") ||
+            text.includes("হ্যালো") ||
+            text.includes("হাই")
+        ) {
+
+            return "হ্যালো! 👋 BlueCat AI-তে স্বাগতম। কী product সম্পর্কে জানতে চান?";
+        }
+
+
+        /*
+         * Product search
+         */
+
+        const product = findProduct(message);
+
+
+        if (product) {
+
+            if (
+                text.includes("price") ||
+                text.includes("দাম") ||
+                text.includes("কত")
+            ) {
+
+                return (
+                    product.name +
+                    " এর দাম ৳" +
+                    product.price +
+                    "। বর্তমানে " +
+                    product.stock +
+                    "টি stock আছে।"
+                );
+            }
+
+
+            if (
+                text.includes("stock") ||
+                text.includes("আছে") ||
+                text.includes("স্টক")
+            ) {
+
+                return (
+                    product.name +
+                    " বর্তমানে available আছে। Stock: " +
+                    product.stock +
+                    "টি।"
+                );
+            }
+
+
+            return (
+                product.name +
+                " available আছে। দাম ৳" +
+                product.price +
+                "। Order করতে চাইলে বলুন।"
+            );
+        }
+
+
+        /*
+         * General price question
+         */
+
+        if (
+            text.includes("price") ||
+            text.includes("দাম") ||
+            text.includes("কত")
+        ) {
+
+            return (
+                "আমাদের products: " +
+                "Blue T-Shirt ৳850, " +
+                "Blue Hoodie ৳1450, " +
+                "Classic Watch ৳1990।"
+            );
+        }
+
+
+        /*
+         * Order
+         */
+
+        if (
+            text.includes("order") ||
+            text.includes("অর্ডার") ||
+            text.includes("কিনব") ||
+            text.includes("নেব")
+        ) {
+
+            return (
+                "অবশ্যই! 🛒 Order করতে আপনার " +
+                "নাম, ফোন নম্বর, address, product এবং quantity দিন।"
+            );
+        }
+
+
+        /*
+         * Delivery
+         */
+
+        if (
+            text.includes("delivery") ||
+            text.includes("ডেলিভারি") ||
+            text.includes("কুরিয়ার") ||
+            text.includes("কুরিয়ার")
+        ) {
+
+            return (
+                "Delivery charge ও delivery time জানতে আপনার location জানালে আমরা তথ্য দিতে পারব।"
+            );
+        }
+
+
+        /*
+         * Thanks
+         */
+
+        if (
+            text.includes("thanks") ||
+            text.includes("thank you") ||
+            text.includes("ধন্যবাদ")
+        ) {
+
+            return "আপনাকেও ধন্যবাদ! 😊 আরও কিছু জানতে চাইলে লিখুন।";
+        }
+
+
+        /*
+         * Fallback
+         */
+
+        return (
+            "আপনার message পেয়েছি। 😊 " +
+            "Product-এর নাম, price অথবা order সম্পর্কে লিখুন।"
+        );
+    }
+
+
+    function showTyping() {
+
+        typing.classList.add("show");
+    }
+
+
+    function hideTyping() {
+
+        typing.classList.remove("show");
+    }
+
+
+    function processMessage(message) {
+
+        addMessage(message, "user");
+
+        input.value = "";
+
+        showTyping();
+
+
+        setTimeout(function() {
+
+            const reply = generateReply(message);
+
+            hideTyping();
+
+            addMessage(reply, "bot");
+
+        }, 600);
+    }
+
+
+    form.addEventListener("submit", function(event) {
+
+        event.preventDefault();
+
+
+        const message = input.value.trim();
+
+
+        if (message === "") {
+
+            return;
+        }
+
+
+        processMessage(message);
+
+    });
+
+
+    input.addEventListener("keydown", function(event) {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            form.requestSubmit();
+
+        }
+
+    });
+
+</script>
+
+</body>
+</html>
